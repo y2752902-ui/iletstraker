@@ -72,8 +72,6 @@ function renderHistory(){
     const l=x.listeningWrong!==null?`<span class="band">${bandFromWrong(x.listeningWrong,"L").toFixed(1)}</span> <small>(${x.listeningWrong} wrong${partsText(x.listeningParts)})</small>`:"—";
     const r=x.readingWrong!==null?`<span class="band">${bandFromWrong(x.readingWrong,"R").toFixed(1)}</span> <small>(${x.readingWrong} wrong${partsText(x.readingParts)})</small>`:"—";
     
-    // === 修复大小作文联动的 BUG ===
-    // 完全依赖自己的字段，不再依赖旧的 writing 字段
     const t1Done = !!x.task1Done;
     const t2Done = !!x.task2Done;
     
@@ -164,7 +162,7 @@ $("entryForm").addEventListener("submit", async e=>{
     task2Type: task2Done ? $("task2Type").value : "",
     task2Note: task2Done ? $("task2Note").value.trim() : "",
     notes: $("notes").value.trim(),
-    writing: task1Done || task2Done, // 保留这个用于统计 Practice Days
+    writing: task1Done || task2Done,
     updatedAt: Date.now()
   };
 
@@ -211,14 +209,14 @@ $("importFile").addEventListener("change",async e=>{
 function updateAuthUI(){
   if(!$("loginBtn")) return;
   const loggedIn = !!currentUser;
-  $("loginBtn").hidden = loggedIn;
-  $("logoutBtn").hidden = !loggedIn;
   $("emailInput").hidden = loggedIn;
+  $("loginBtn").hidden = loggedIn;
+  $("emailOtp").hidden = loggedIn;
+  $("verifyBtn").hidden = loggedIn;
+  $("logoutBtn").hidden = !loggedIn;
   
   if(loggedIn) {
     $("syncStatus").textContent = `已登录：${currentUser.email}`;
-    $("emailOtp").hidden = true;
-    $("verifyBtn").hidden = true;
   } else {
     $("syncStatus").textContent = sb ? "未登录：只保存在本机" : "未配置云端同步";
   }
@@ -298,12 +296,9 @@ $("loginBtn")?.addEventListener("click", async () => {
   if(error) {
     alert(error.message);
   } else {
-    alert("验证码已发送到你的邮箱，请查收（如果没看到，请检查垃圾邮件）。");
-    $("emailInput").hidden = true;
-    $("loginBtn").hidden = true;
-    $("emailOtp").hidden = false;
-    $("verifyBtn").hidden = false;
+    alert("验证码已发送，请去邮箱查看那 6 位数字。");
     $("syncStatus").textContent = "等待输入验证码...";
+    $("emailInput").disabled = true; // 锁定邮箱防止乱改
   }
 });
 
@@ -317,7 +312,7 @@ $("verifyBtn")?.addEventListener("click", async () => {
   const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
   
   if(error) {
-    alert("验证失败：" + error.message);
+    alert("验证失败：" + error.message + "\n请检查验证码是否填错，或稍后再试。");
     $("verifyBtn").textContent = "验证并登录";
   } else {
     $("verifyBtn").textContent = "验证并登录";
@@ -328,11 +323,8 @@ $("verifyBtn")?.addEventListener("click", async () => {
 $("logoutBtn")?.addEventListener("click", async () => {
   if(sb) await sb.auth.signOut();
   currentUser = null;
-  $("emailInput").hidden = false;
-  $("loginBtn").hidden = false;
-  $("emailOtp").hidden = true;
-  $("verifyBtn").hidden = true;
   $("emailOtp").value = "";
+  $("emailInput").disabled = false; // 解锁邮箱
   updateAuthUI();
 });
 
