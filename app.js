@@ -2,7 +2,7 @@ const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = "ielts-tracker-records-v1";
 
 // ====== 你的云端配置 ======
-const SUPABASE_URL = "https://jslkvrjsoaexocwvcuvm.supabase.co";
+const SUPABASE_URL = "https://jslkvrisoaxecowvcuvm.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_pl3xc71zvKX_Gs1JOqsVZQ_4E-tIRPt"; 
 // ===========================
 
