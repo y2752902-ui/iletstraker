@@ -4,7 +4,7 @@ WHAT'S INCLUDED
 - Responsive IELTS practice tracker for desktop and iPad.
 - Listening and Academic Reading: enter wrong answers (0–40); the app estimates the band.
 - You can save only one section, or just a Speaking/Writing practice day.
-- Daily Speaking and Writing checkboxes.
+- Daily Speaking checkbox plus separate Writing Task 1 and Task 2 tracking, question-type selectors, and optional topic notes.
 - History table and a simple score trend chart.
 - Export/import JSON backup.
 - PWA manifest and service worker for installability/offline caching.

@@ -57,10 +57,37 @@
           </div>
         </div>
         <div class="practice-area">
-          <div class="practice-heading"><div><p class="eyebrow">DAILY HABITS</p><h3>Did you practise today?</h3></div><span class="optional">You can tick either or both</span></div>
-          <div class="habit-grid">
-            <label class="habit"><input type="checkbox" id="speaking"><span class="checkmark">✓</span><span><b>Speaking</b><small>Speaking practice</small></span></label>
-            <label class="habit"><input type="checkbox" id="writing"><span class="checkmark">✓</span><span><b>Writing</b><small>Writing practice</small></span></label>
+          <div class="practice-heading"><div><p class="eyebrow">DAILY HABITS</p><h3>Speaking practice</h3></div><span class="optional">Tick when completed</span></div>
+          <div class="habit-grid single-habit">
+            <label class="habit"><input type="checkbox" id="speaking"><span class="checkmark">✓</span><span><b>Speaking</b><small>Practised IELTS Speaking today</small></span></label>
+          </div>
+        </div>
+
+        <div class="writing-area">
+          <div class="practice-heading"><div><p class="eyebrow">WRITING PRACTICE</p><h3>Track Task 1 & Task 2 separately</h3></div><span class="optional">Choose the question type you practised</span></div>
+          <div class="writing-grid">
+            <section class="writing-task task-one">
+              <div class="task-heading"><span class="task-number">01</span><div><b>Task 1 · Report</b><small>Academic Writing · 小作文</small></div></div>
+              <label class="habit task-check"><input type="checkbox" id="task1Done"><span class="checkmark">✓</span><span><b>Practised Task 1</b><small>Tick when completed</small></span></label>
+              <label class="field">Chart / question type
+                <select id="task1Type">
+                  <option value="">Select a type</option>
+                  <option>Bar Chart</option><option>Pie Chart</option><option>Map</option><option>Process Diagram</option><option>Line Graph</option><option>Table</option><option>Mixed Charts</option><option>Multiple Charts</option>
+                </select>
+              </label>
+              <label class="field">Question / topic note <span class="optional">optional</span><input type="text" id="task1Note" maxlength="180" placeholder="e.g. Changes in population from 1990 to 2020"></label>
+            </section>
+            <section class="writing-task task-two">
+              <div class="task-heading"><span class="task-number">02</span><div><b>Task 2 · Essay</b><small>Academic Writing · 大作文</small></div></div>
+              <label class="habit task-check"><input type="checkbox" id="task2Done"><span class="checkmark">✓</span><span><b>Practised Task 2</b><small>Tick when completed</small></span></label>
+              <label class="field">Essay question type
+                <select id="task2Type">
+                  <option value="">Select a type</option>
+                  <option>Agree or Disagree</option><option>Discuss Both Views</option><option>Advantages & Disadvantages</option><option>Outweigh</option><option>Problems & Solutions</option><option>Why & Is it Positive?</option>
+                </select>
+              </label>
+              <label class="field">Question / topic note <span class="optional">optional</span><input type="text" id="task2Note" maxlength="180" placeholder="e.g. The impact of technology on education"></label>
+            </section>
           </div>
         </div>
         <label class="field notes-field">Study notes<textarea id="notes" rows="3" maxlength="1000" placeholder="What went well? What would you like to review next time?"></textarea></label>
@@ -80,7 +107,7 @@
 
     <section class="panel history-panel">
       <div class="table-head"><h3>Saved records</h3><span id="recordCount">0 records</span></div>
-      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Material</th><th>Listening</th><th>Reading</th><th>Speaking</th><th>Writing</th><th></th></tr></thead><tbody id="historyBody"><tr><td colspan="7" class="empty-row">No records yet. Add your first practice above.</td></tr></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Material</th><th>Listening</th><th>Reading</th><th>Speaking</th><th>Task 1</th><th>Task 2</th><th></th></tr></thead><tbody id="historyBody"><tr><td colspan="8" class="empty-row">No records yet. Add your first practice above.</td></tr></tbody></table></div>
     </section>
 
     <footer><span>IELTS TRACKER</span><span>Your data stays in this browser unless you export it.</span></footer>

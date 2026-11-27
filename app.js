@@ -28,7 +28,7 @@ function renderStats(){
   $("latestReading").textContent=r?r.band.toFixed(1):"—";$("latestReadingMeta").textContent=r?`${r.wrong} wrong · ${formatDate(r.date)}`:"No result yet";
   if(l&&r){$("averageScore").textContent=(Math.round((l.band+r.band)/2*2)/2).toFixed(1);$("averageMeta").textContent="Average of latest section scores";}
   else {$("averageScore").textContent=l?`L ${l.band.toFixed(1)}`:r?`R ${r.band.toFixed(1)}`:"—";$("averageMeta").textContent="Only one section available";}
-  $("practiceDays").textContent=new Set(records.filter(x=>x.speaking||x.writing).map(x=>x.date)).size;
+  $("practiceDays").textContent=new Set(records.filter(x=>x.speaking||x.task1Done||x.task2Done||x.writing).map(x=>x.date)).size;
 }
 function renderHistory(){
   const sorted=[...records].sort((a,b)=>b.date.localeCompare(a.date));
@@ -37,7 +37,11 @@ function renderHistory(){
   $("historyBody").innerHTML=sorted.map(x=>{
     const l=x.listeningWrong!==null?`<span class="band">${bandFromWrong(x.listeningWrong,"L").toFixed(1)}</span> <small>(${x.listeningWrong} wrong)</small>`:"—";
     const r=x.readingWrong!==null?`<span class="band">${bandFromWrong(x.readingWrong,"R").toFixed(1)}</span> <small>(${x.readingWrong} wrong)</small>`:"—";
-    return `<tr><td>${formatDate(x.date)}</td><td>${escapeHTML(x.testName||"Practice")}</td><td>${l}</td><td>${r}</td><td>${x.speaking?'<span class="status">✓ Done</span>':"—"}</td><td>${x.writing?'<span class="status">✓ Done</span>':"—"}</td><td><button class="delete-btn" data-delete="${x.id}" aria-label="Delete record">×</button></td></tr>`;
+    const t1Done=!!(x.task1Done || x.writing);
+    const t2Done=!!x.task2Done;
+    const t1=t1Done?`<span class="status">✓ ${escapeHTML(x.task1Type||"Done")}</span>${x.task1Note?`<small class="topic-note">${escapeHTML(x.task1Note)}</small>`:""}`:"—";
+    const t2=t2Done?`<span class="status">✓ ${escapeHTML(x.task2Type||"Done")}</span>${x.task2Note?`<small class="topic-note">${escapeHTML(x.task2Note)}</small>`:"—"}`:"—";
+    return `<tr><td>${formatDate(x.date)}</td><td>${escapeHTML(x.testName||"Practice")}</td><td>${l}</td><td>${r}</td><td>${x.speaking?'<span class="status">✓ Done</span>':"—"}</td><td>${t1}</td><td>${t2}</td><td><button class="delete-btn" data-delete="${x.id}" aria-label="Delete record">×</button></td></tr>`;
   }).join("");
   document.querySelectorAll("[data-delete]").forEach(btn=>btn.addEventListener("click",()=>deleteRecord(btn.dataset.delete)));
 }
@@ -66,7 +70,10 @@ $("entryForm").addEventListener("submit",e=>{
   e.preventDefault();
   const l=$("listeningWrong").value,r=$("readingWrong").value;
   if(!validScore(l)||!validScore(r)){alert("Please enter whole numbers from 0 to 40.");return;}
-  const record={id:editingId||`${Date.now()}-${Math.random().toString(16).slice(2)}`,date:$("date").value,testName:$("testName").value.trim(),listeningWrong:l===""?null:Number(l),readingWrong:r===""?null:Number(r),speaking:$("speaking").checked,writing:$("writing").checked,notes:$("notes").value.trim()};
+  const task1Done=$("task1Done").checked, task2Done=$("task2Done").checked;
+  if(task1Done && !$("task1Type").value){alert("Please select the Task 1 question type.");$("task1Type").focus();return;}
+  if(task2Done && !$("task2Type").value){alert("Please select the Task 2 essay type.");$("task2Type").focus();return;}
+  const record={id:editingId||`${Date.now()}-${Math.random().toString(16).slice(2)}`,date:$("date").value,testName:$("testName").value.trim(),listeningWrong:l===""?null:Number(l),readingWrong:r===""?null:Number(r),speaking:$("speaking").checked,task1Done,task1Type:task1Done?$("task1Type").value:"",task1Note:task1Done?$("task1Note").value.trim():"",task2Done,task2Type:task2Done?$("task2Type").value:"",task2Note:task2Done?$("task2Note").value.trim():"",notes:$("notes").value.trim()};
   const index=records.findIndex(x=>String(x.id)===String(record.id));if(index>=0)records[index]=record;else records.push(record);
   saveRecords();render();$("formMessage").textContent="Record saved on this device.";resetForm();
 });
