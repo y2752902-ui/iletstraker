@@ -30,17 +30,18 @@
       <div>
         <p class="eyebrow">跨设备同步</p>
         <h3>用同一个邮箱登录</h3>
-        <p class="sync-hint">输入邮箱获取验证码，三台设备都用同一个邮箱登录。</p>
+        <p class="sync-hint">输入邮箱获取验证码，填在右侧框内，点击登录。</p>
       </div>
-      <div class="sync-controls">
-        <input id="emailInput" type="email" placeholder="你的邮箱">
+      <div class="sync-controls" style="flex-wrap: wrap;">
+        <input id="emailInput" type="email" placeholder="输入你的邮箱">
         <button id="loginBtn" class="button button-small button-quiet" type="button">发送验证码</button>
         
-        <input id="emailOtp" type="text" placeholder="输入邮件里的 6 位验证码" maxlength="6" hidden>
-        <button id="verifyBtn" class="button button-small button-primary" type="button" hidden>验证并登录</button>
+        <!-- 去掉了 hidden，直接显示 -->
+        <input id="emailOtp" type="text" placeholder="输入 6 位验证码" maxlength="6" style="width: 130px;">
+        <button id="verifyBtn" class="button button-small button-primary" type="button">验证并登录</button>
         
         <button id="logoutBtn" class="button button-small button-quiet" type="button" hidden>退出</button>
-        <span id="syncStatus">未登录：只保存在本机</span>
+        <span id="syncStatus" style="width: 100%;">未登录：只保存在本机</span>
       </div>
     </section>
 
