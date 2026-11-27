@@ -31,16 +31,13 @@
     <section class="sync-panel panel">
       <div>
         <p class="eyebrow">跨设备同步</p>
-        <h3>用同一个邮箱登录</h3>
-        <p class="sync-hint">输入邮箱获取验证码，填在右侧框内，点击登录。</p>
+        <h3>用邮箱和密码登录</h3>
+        <p class="sync-hint">第一次输入邮箱和密码会**自动注册**。三台设备用同一个邮箱密码即可同步。</p>
       </div>
       <div class="sync-controls" style="flex-wrap: wrap;">
-        <input id="emailInput" type="email" placeholder="输入你的邮箱">
-        <button id="loginBtn" class="button button-small button-quiet" type="button">发送验证码</button>
-        
-        <input id="emailOtp" type="text" placeholder="输入 6 位验证码" maxlength="6" style="width: 130px;">
-        <button id="verifyBtn" class="button button-small button-primary" type="button">验证并登录</button>
-        
+        <input id="emailInput" type="email" placeholder="你的邮箱">
+        <input id="passwordInput" type="password" placeholder="设置/输入密码">
+        <button id="loginBtn" class="button button-small button-primary" type="button">登录 / 注册</button>
         <button id="logoutBtn" class="button button-small button-quiet" type="button" hidden>退出</button>
         <span id="syncStatus" style="width: 100%; font-weight: bold; color: #c45b5b;">未登录：只保存在本机</span>
       </div>
@@ -151,12 +148,10 @@
     <footer><span>IELTS TRACKER</span><span>Your data stays in this browser unless you export it.</span></footer>
   </main>
 
-  <!-- 核心代码直接内置在页面里 -->
   <script>
     const $ = (id) => document.getElementById(id);
     const STORAGE_KEY = "ielts-tracker-records-v1";
 
-    // 你的云端配置（已填好）
     const SUPABASE_URL = "https://jslkvrjsoaexocwvcuvm.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_pl3xc71zvKX_Gs1JQqsVZQ_4E-tIRPt"; 
 
@@ -365,12 +360,9 @@
       const loggedIn = !!currentUser;
       
       $("emailInput").hidden = loggedIn;
+      $("passwordInput").hidden = loggedIn;
       $("loginBtn").hidden = loggedIn;
-      $("emailOtp").hidden = loggedIn;
-      $("verifyBtn").hidden = loggedIn;
       $("logoutBtn").hidden = !loggedIn;
-      
-      $("emailInput").disabled = false;
       
       if(loggedIn) {
         $("syncStatus").textContent = `已登录：${currentUser.email}`;
@@ -449,51 +441,37 @@
       });
     }
 
-    // 发送验证码
+    // 登录/注册
     $("loginBtn")?.addEventListener("click", async () => {
-      if(!sb){ alert("Supabase 未初始化，请检查网络或配置。"); return; }
+      if(!sb){ alert("Supabase 未初始化。"); return; }
       const email = $("emailInput").value.trim();
-      if(!email){ alert("请输入邮箱"); return; }
+      const password = $("passwordInput").value;
       
-      $("loginBtn").textContent = "发送中...";
+      if(!email || !password){ alert("请输入邮箱和密码"); return; }
+      if(password.length < 6){ alert("密码至少需要 6 位字符"); return; }
+      
+      $("loginBtn").textContent = "处理中...";
       
       try {
-        const { error } = await sb.auth.signInWithOtp({
-          email,
-          options: { shouldCreateUser: true }
-        });
+        // 先尝试登录
+        let { data, error } = await sb.auth.signInWithPassword({ email, password });
         
-        if(error) {
-          alert("发送失败：" + error.message);
-        } else {
-          alert("验证码已发送，请去邮箱查看那 6 位数字。");
-          $("syncStatus").textContent = "等待输入验证码...";
+        // 如果登录失败，且错误提示是 Invalid login credentials，说明账号不存在，尝试注册
+        if (error && (error.message.includes("Invalid login credentials") || error.status === 400)) {
+           const { data: signUpData, error: signUpError } = await sb.auth.signUp({ email, password });
+           if (signUpError) {
+             alert("注册失败：" + signUpError.message);
+           } else {
+             alert("账号创建成功，已自动登录！");
+           }
+        } else if (error) {
+           alert("登录失败：" + error.message);
         }
-      } catch (err) {
-        alert("网络错误，发送失败！请检查你当前的网络是否能访问外网。\n错误代码：" + err.message);
-      } finally {
-        $("loginBtn").textContent = "发送验证码";
-      }
-    });
-
-    // 验证 6 位验证码
-    $("verifyBtn")?.addEventListener("click", async () => {
-      const email = $("emailInput").value.trim();
-      const token = $("emailOtp").value.trim();
-      if(!token || token.length !== 6){ alert("请输入完整的 6 位数字验证码"); return; }
-      
-      $("verifyBtn").textContent = "验证中...";
-      
-      try {
-        const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
         
-        if(error) {
-          alert("验证失败：" + error.message);
-        }
       } catch (err) {
-        alert("网络错误，验证失败！\n错误代码：" + err.message);
+        alert("网络错误，请检查你的网络是否能连接外网。\n错误代码：" + err.message);
       } finally {
-        $("verifyBtn").textContent = "验证并登录";
+        $("loginBtn").textContent = "登录 / 注册";
       }
     });
 
@@ -501,7 +479,7 @@
     $("logoutBtn")?.addEventListener("click", async () => {
       if(sb) await sb.auth.signOut();
       currentUser = null;
-      $("emailOtp").value = "";
+      $("passwordInput").value = "";
       updateAuthUI();
     });
 
