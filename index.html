@@ -30,11 +30,15 @@
       <div>
         <p class="eyebrow">跨设备同步</p>
         <h3>用同一个邮箱登录</h3>
-        <p class="sync-hint">登录后，Mac、手机、iPad 会读写同一份云端记录。三台设备都要用同一个邮箱登录一次。</p>
+        <p class="sync-hint">输入邮箱获取验证码，三台设备都用同一个邮箱登录。</p>
       </div>
       <div class="sync-controls">
         <input id="emailInput" type="email" placeholder="你的邮箱">
-        <button id="loginBtn" class="button button-small button-quiet" type="button">发送登录链接</button>
+        <button id="loginBtn" class="button button-small button-quiet" type="button">发送验证码</button>
+        
+        <input id="emailOtp" type="text" placeholder="输入邮件里的 6 位验证码" maxlength="6" hidden>
+        <button id="verifyBtn" class="button button-small button-primary" type="button" hidden>验证并登录</button>
+        
         <button id="logoutBtn" class="button button-small button-quiet" type="button" hidden>退出</button>
         <span id="syncStatus">未登录：只保存在本机</span>
       </div>
@@ -110,7 +114,12 @@
               <label class="field">Essay question type
                 <select id="task2Type">
                   <option value="">Select a type</option>
-                  <option>Agree or Disagree</option><option>Discuss Both Views</option><option>Advantages & Disadvantages</option><option>Outweigh</option><option>Problems & Solutions</option><option>Why & Is it Positive?</option>
+                  <option>Agree or Disagree</option>
+                  <option>Positive or Negative</option>
+                  <option>Advantages outweigh Disadvantages</option>
+                  <option>Discuss Both Views</option>
+                  <option>Problem / Cause & Solution</option>
+                  <option>Two-part questions</option>
                 </select>
               </label>
               <label class="field">Question / topic note <span class="optional">optional</span><input type="text" id="task2Note" maxlength="180" placeholder="e.g. The impact of technology on education"></label>
