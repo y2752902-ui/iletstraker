@@ -3,7 +3,7 @@ const STORAGE_KEY = "ielts-tracker-records-v1";
 
 // ====== 你的云端配置 ======
 const SUPABASE_URL = "https://jslkvrjsoaexocwvcuvm.supabase.co";
-const SUPABASE_ANON_KEY = "这里还是填你那个 sb_publishable_ 开头的长串";
+const SUPABASE_ANON_KEY = "sb_publishable_pl3xc71zvKX_Gs1JOqsVZQ_4E-tIRPt";
 // ===========================
 
 let sb = null;
@@ -210,15 +210,13 @@ function updateAuthUI(){
   if(!$("loginBtn")) return;
   const loggedIn = !!currentUser;
   
-  // 彻底重置所有状态
   $("emailInput").hidden = loggedIn;
   $("loginBtn").hidden = loggedIn;
   $("emailOtp").hidden = loggedIn;
   $("verifyBtn").hidden = loggedIn;
   $("logoutBtn").hidden = !loggedIn;
   
-  // 强制解锁输入框，防止卡死
-  $("emailInput").disabled = false;
+  $("emailInput").disabled = false; // 确保不会锁死
   
   if(loggedIn) {
     $("syncStatus").textContent = `已登录：${currentUser.email}`;
@@ -229,56 +227,64 @@ function updateAuthUI(){
 
 async function syncAll(){
   if(!currentUser || !sb) return;
-  const { data: cloud, error } = await sb.from("records").select("*");
-  if(error){ $("syncStatus").textContent = "同步失败：" + error.message; return; }
+  try {
+    const { data: cloud, error } = await sb.from("records").select("*");
+    if(error){ $("syncStatus").textContent = "同步失败：" + error.message; return; }
 
-  const cloudMap = new Map(cloud.map(r => [String(r.id), r]));
-  const localMap = new Map(records.map(r => [String(r.id), { ...r, updatedAt: r.updatedAt || 0 }]));
+    const cloudMap = new Map(cloud.map(r => [String(r.id), r]));
+    const localMap = new Map(records.map(r => [String(r.id), { ...r, updatedAt: r.updatedAt || 0 }]));
 
-  for(const [id, cr] of cloudMap){
-    const lr = localMap.get(id);
-    if(cr.deleted){
-      if(!lr || (cr.updated_at || 0) >= (lr.updatedAt || 0)) localMap.delete(id);
-      continue;
+    for(const [id, cr] of cloudMap){
+      const lr = localMap.get(id);
+      if(cr.deleted){
+        if(!lr || (cr.updated_at || 0) >= (lr.updatedAt || 0)) localMap.delete(id);
+        continue;
+      }
+      if(!lr || (cr.updated_at || 0) > (lr.updatedAt || 0)){
+        localMap.set(id, { ...(cr.data || {}), id, updatedAt: cr.updated_at || 0 });
+      }
     }
-    if(!lr || (cr.updated_at || 0) > (lr.updatedAt || 0)){
-      localMap.set(id, { ...(cr.data || {}), id, updatedAt: cr.updated_at || 0 });
+
+    const upserts = [];
+    for(const [id, r] of localMap){
+      const cr = cloudMap.get(id);
+      if(!cr || (r.updatedAt || 0) > (cr.updated_at || 0)){
+        const rec = { ...r, updatedAt: r.updatedAt || Date.now() };
+        localMap.set(id, rec);
+        upserts.push({
+          user_id: currentUser.id,
+          id,
+          data: rec,
+          updated_at: rec.updatedAt,
+          deleted: false
+        });
+      }
     }
-  }
 
-  const upserts = [];
-  for(const [id, r] of localMap){
-    const cr = cloudMap.get(id);
-    if(!cr || (r.updatedAt || 0) > (cr.updated_at || 0)){
-      const rec = { ...r, updatedAt: r.updatedAt || Date.now() };
-      localMap.set(id, rec);
-      upserts.push({
-        user_id: currentUser.id,
-        id,
-        data: rec,
-        updated_at: rec.updatedAt,
-        deleted: false
-      });
+    if(upserts.length){
+      const { error: upErr } = await sb.from("records").upsert(upserts, { onConflict: "user_id,id" });
+      if(upErr){ $("syncStatus").textContent = "同步失败：" + upErr.message; return; }
     }
-  }
 
-  if(upserts.length){
-    const { error: upErr } = await sb.from("records").upsert(upserts, { onConflict: "user_id,id" });
-    if(upErr){ $("syncStatus").textContent = "同步失败：" + upErr.message; return; }
+    records = [...localMap.values()];
+    saveRecords();
+    render();
+    $("syncStatus").textContent = "已同步";
+  } catch (err) {
+    $("syncStatus").textContent = "网络异常，无法同步";
   }
-
-  records = [...localMap.values()];
-  saveRecords();
-  render();
-  $("syncStatus").textContent = "已同步";
 }
 
 async function initAuth(){
   if(!sb){ updateAuthUI(); return; }
-  const { data } = await sb.auth.getSession();
-  currentUser = data.session?.user || null;
-  updateAuthUI();
-  if(currentUser) await syncAll();
+  try {
+    const { data } = await sb.auth.getSession();
+    currentUser = data.session?.user || null;
+    updateAuthUI();
+    if(currentUser) await syncAll();
+  } catch (err) {
+    console.error(err);
+  }
 
   sb.auth.onAuthStateChange(async (_event, session) => {
     currentUser = session?.user || null;
@@ -287,23 +293,30 @@ async function initAuth(){
   });
 }
 
-// 发送验证码
+// 发送验证码（加了安全拦截）
 $("loginBtn")?.addEventListener("click", async () => {
-  if(!sb){ alert("还没有配置云端同步，请先填写 app.js 顶部的两个 Supabase 值。"); return; }
+  if(!sb){ alert("Supabase 未初始化，请检查网络或配置。"); return; }
   const email = $("emailInput").value.trim();
   if(!email){ alert("请输入邮箱"); return; }
   
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true }
-  });
+  $("loginBtn").textContent = "发送中...";
   
-  if(error) {
-    alert("发送失败：" + error.message);
-  } else {
-    alert("验证码已发送，请去邮箱查看那 6 位数字。");
-    $("syncStatus").textContent = "等待输入验证码...";
-    // 不再使用 disabled = true
+  try {
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true }
+    });
+    
+    if(error) {
+      alert("发送失败：" + error.message);
+    } else {
+      alert("验证码已发送，请去邮箱查看那 6 位数字。");
+      $("syncStatus").textContent = "等待输入验证码...";
+    }
+  } catch (err) {
+    alert("网络错误，发送失败！请检查你当前的网络是否能访问外网。\n错误代码：" + err.message);
+  } finally {
+    $("loginBtn").textContent = "发送验证码";
   }
 });
 
@@ -311,16 +324,19 @@ $("loginBtn")?.addEventListener("click", async () => {
 $("verifyBtn")?.addEventListener("click", async () => {
   const email = $("emailInput").value.trim();
   const token = $("emailOtp").value.trim();
-  if(!email) { alert("请在上面填入邮箱"); return; }
   if(!token || token.length !== 6){ alert("请输入完整的 6 位数字验证码"); return; }
   
   $("verifyBtn").textContent = "验证中...";
-  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
   
-  if(error) {
-    alert("验证失败：" + error.message + "\n请检查验证码是否填错，或稍后再试。");
-    $("verifyBtn").textContent = "验证并登录";
-  } else {
+  try {
+    const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+    
+    if(error) {
+      alert("验证失败：" + error.message);
+    }
+  } catch (err) {
+    alert("网络错误，验证失败！\n错误代码：" + err.message);
+  } finally {
     $("verifyBtn").textContent = "验证并登录";
   }
 });
