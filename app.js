@@ -3,7 +3,7 @@ const STORAGE_KEY = "ielts-tracker-records-v1";
 
 // ====== 你的云端配置 ======
 const SUPABASE_URL = "https://jslkvrjsoaexocwvcuvm.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_pl3xc71zvKX_Gs1JOqsVZQ_4E-tIRPt";
+const SUPABASE_ANON_KEY = "这里还是填你那个 sb_publishable_ 开头的长串";
 // ===========================
 
 let sb = null;
@@ -209,11 +209,16 @@ $("importFile").addEventListener("change",async e=>{
 function updateAuthUI(){
   if(!$("loginBtn")) return;
   const loggedIn = !!currentUser;
+  
+  // 彻底重置所有状态
   $("emailInput").hidden = loggedIn;
   $("loginBtn").hidden = loggedIn;
   $("emailOtp").hidden = loggedIn;
   $("verifyBtn").hidden = loggedIn;
   $("logoutBtn").hidden = !loggedIn;
+  
+  // 强制解锁输入框，防止卡死
+  $("emailInput").disabled = false;
   
   if(loggedIn) {
     $("syncStatus").textContent = `已登录：${currentUser.email}`;
@@ -294,11 +299,11 @@ $("loginBtn")?.addEventListener("click", async () => {
   });
   
   if(error) {
-    alert(error.message);
+    alert("发送失败：" + error.message);
   } else {
     alert("验证码已发送，请去邮箱查看那 6 位数字。");
     $("syncStatus").textContent = "等待输入验证码...";
-    $("emailInput").disabled = true; // 锁定邮箱防止乱改
+    // 不再使用 disabled = true
   }
 });
 
@@ -306,6 +311,7 @@ $("loginBtn")?.addEventListener("click", async () => {
 $("verifyBtn")?.addEventListener("click", async () => {
   const email = $("emailInput").value.trim();
   const token = $("emailOtp").value.trim();
+  if(!email) { alert("请在上面填入邮箱"); return; }
   if(!token || token.length !== 6){ alert("请输入完整的 6 位数字验证码"); return; }
   
   $("verifyBtn").textContent = "验证中...";
@@ -324,7 +330,6 @@ $("logoutBtn")?.addEventListener("click", async () => {
   if(sb) await sb.auth.signOut();
   currentUser = null;
   $("emailOtp").value = "";
-  $("emailInput").disabled = false; // 解锁邮箱
   updateAuthUI();
 });
 
