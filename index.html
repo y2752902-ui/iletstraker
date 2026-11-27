@@ -26,6 +26,20 @@
       <div class="welcome-art" aria-hidden="true"><span>7.0</span><small>YOUR NEXT MILESTONE</small></div>
     </section>
 
+    <section class="sync-panel panel">
+      <div>
+        <p class="eyebrow">跨设备同步</p>
+        <h3>用同一个邮箱登录</h3>
+        <p class="sync-hint">登录后，Mac、手机、iPad 会读写同一份云端记录。三台设备都要用同一个邮箱登录一次。</p>
+      </div>
+      <div class="sync-controls">
+        <input id="emailInput" type="email" placeholder="你的邮箱">
+        <button id="loginBtn" class="button button-small button-quiet" type="button">发送登录链接</button>
+        <button id="logoutBtn" class="button button-small button-quiet" type="button" hidden>退出</button>
+        <span id="syncStatus">未登录：只保存在本机</span>
+      </div>
+    </section>
+
     <section class="stats-grid" aria-label="Overview">
       <article class="stat-card"><span class="stat-label">LISTENING · LATEST</span><strong id="latestListening">—</strong><small id="latestListeningMeta">No result yet</small></article>
       <article class="stat-card"><span class="stat-label">READING · LATEST</span><strong id="latestReading">—</strong><small id="latestReadingMeta">No result yet</small></article>
@@ -48,11 +62,24 @@
           <div class="score-box">
             <div class="score-title"><span class="section-icon">耳</span><div><b>Listening</b><small>40 questions</small></div></div>
             <label class="field">Wrong answers <span class="optional">optional</span><input type="number" id="listeningWrong" min="0" max="40" step="1" placeholder="0–40"></label>
+            <div class="parts-grid">
+              <label>P1<input type="number" id="listeningPart1" min="0" max="10" step="1" placeholder="0–10"></label>
+              <label>P2<input type="number" id="listeningPart2" min="0" max="10" step="1" placeholder="0–10"></label>
+              <label>P3<input type="number" id="listeningPart3" min="0" max="10" step="1" placeholder="0–10"></label>
+              <label>P4<input type="number" id="listeningPart4" min="0" max="10" step="1" placeholder="0–10"></label>
+            </div>
+            <small class="parts-hint">可选：填写每部分错几个，填全后自动汇总总分</small>
             <div class="score-result" id="listeningResult">Enter a score to see your estimated band</div>
           </div>
           <div class="score-box">
             <div class="score-title"><span class="section-icon">文</span><div><b>Reading · Academic</b><small>40 questions</small></div></div>
             <label class="field">Wrong answers <span class="optional">optional</span><input type="number" id="readingWrong" min="0" max="40" step="1" placeholder="0–40"></label>
+            <div class="parts-grid reading-parts">
+              <label>P1<input type="number" id="readingPart1" min="0" max="14" step="1" placeholder="0–14"></label>
+              <label>P2<input type="number" id="readingPart2" min="0" max="14" step="1" placeholder="0–14"></label>
+              <label>P3<input type="number" id="readingPart3" min="0" max="14" step="1" placeholder="0–14"></label>
+            </div>
+            <small class="parts-hint">可选：填写每篇错几个，填全后自动汇总总分</small>
             <div class="score-result" id="readingResult">Enter a score to see your estimated band</div>
           </div>
         </div>
@@ -112,6 +139,8 @@
 
     <footer><span>IELTS TRACKER</span><span>Your data stays in this browser unless you export it.</span></footer>
   </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>
