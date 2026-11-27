@@ -1,0 +1,17 @@
+{
+  "name": "IELTS Tracker",
+  "short_name": "IELTS Tracker",
+  "description": "Personal IELTS study tracker",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#172b4d",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

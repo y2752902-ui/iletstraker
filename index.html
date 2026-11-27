@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#172b4d">
+  <meta name="description" content="A personal IELTS study tracker">
+  <title>IELTS Tracker</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="IELTS Tracker home"><span class="brand-mark">I</span><span>IELTS <b>TRACKER</b></span></a>
+    <span class="goal-pill">GOAL · BAND 7.0</span>
+  </header>
+
+  <main class="container">
+    <section class="welcome">
+      <div>
+        <p class="eyebrow">YOUR PERSONAL STUDY SPACE</p>
+        <h1>Small steps.<br><em>Real progress.</em></h1>
+        <p class="sub">Keep track of practice, notice your progress, and stay consistent.</p>
+      </div>
+      <div class="welcome-art" aria-hidden="true"><span>7.0</span><small>YOUR NEXT MILESTONE</small></div>
+    </section>
+
+    <section class="stats-grid" aria-label="Overview">
+      <article class="stat-card"><span class="stat-label">LISTENING · LATEST</span><strong id="latestListening">—</strong><small id="latestListeningMeta">No result yet</small></article>
+      <article class="stat-card"><span class="stat-label">READING · LATEST</span><strong id="latestReading">—</strong><small id="latestReadingMeta">No result yet</small></article>
+      <article class="stat-card stat-card-dark"><span class="stat-label">L & R AVERAGE</span><strong id="averageScore">—</strong><small id="averageMeta">Complete both sections</small></article>
+      <article class="stat-card"><span class="stat-label">PRACTICE DAYS</span><strong id="practiceDays">0</strong><small>Days with a speaking or writing session</small></article>
+    </section>
+
+    <div class="section-heading">
+      <div><p class="eyebrow">DAILY RECORD</p><h2>Log your practice</h2></div>
+      <span class="today-label" id="todayLabel"></span>
+    </div>
+
+    <section class="panel">
+      <form id="entryForm">
+        <div class="form-top">
+          <label class="field">Practice date<input type="date" id="date" required></label>
+          <label class="field">Test / material<input type="text" id="testName" maxlength="80" placeholder="e.g. Cambridge IELTS 18 · Test 1"></label>
+        </div>
+        <div class="score-grid">
+          <div class="score-box">
+            <div class="score-title"><span class="section-icon">耳</span><div><b>Listening</b><small>40 questions</small></div></div>
+            <label class="field">Wrong answers <span class="optional">optional</span><input type="number" id="listeningWrong" min="0" max="40" step="1" placeholder="0–40"></label>
+            <div class="score-result" id="listeningResult">Enter a score to see your estimated band</div>
+          </div>
+          <div class="score-box">
+            <div class="score-title"><span class="section-icon">文</span><div><b>Reading · Academic</b><small>40 questions</small></div></div>
+            <label class="field">Wrong answers <span class="optional">optional</span><input type="number" id="readingWrong" min="0" max="40" step="1" placeholder="0–40"></label>
+            <div class="score-result" id="readingResult">Enter a score to see your estimated band</div>
+          </div>
+        </div>
+        <div class="practice-area">
+          <div class="practice-heading"><div><p class="eyebrow">DAILY HABITS</p><h3>Did you practise today?</h3></div><span class="optional">You can tick either or both</span></div>
+          <div class="habit-grid">
+            <label class="habit"><input type="checkbox" id="speaking"><span class="checkmark">✓</span><span><b>Speaking</b><small>Speaking practice</small></span></label>
+            <label class="habit"><input type="checkbox" id="writing"><span class="checkmark">✓</span><span><b>Writing</b><small>Writing practice</small></span></label>
+          </div>
+        </div>
+        <label class="field notes-field">Study notes<textarea id="notes" rows="3" maxlength="1000" placeholder="What went well? What would you like to review next time?"></textarea></label>
+        <div class="form-actions"><button class="button button-primary" type="submit" id="saveButton">Save daily record</button><button class="button button-quiet" type="reset" id="clearButton">Clear form</button><span id="formMessage" role="status"></span></div>
+      </form>
+    </section>
+
+    <section class="section-heading history-heading">
+      <div><p class="eyebrow">YOUR JOURNEY</p><h2>Progress & history</h2></div>
+      <div class="data-actions"><button class="button button-small button-quiet" id="exportButton">Export backup</button><label class="button button-small button-quiet import-label">Import backup<input type="file" id="importFile" accept="application/json,.json" hidden></label></div>
+    </section>
+
+    <section class="panel chart-panel">
+      <div class="chart-head"><div><h3>Score trend</h3><p>Estimated band scores from your saved practice</p></div><span class="chart-legend"><i class="legend-l"></i> Listening <i class="legend-r"></i> Reading</span></div>
+      <div id="chart" class="chart-empty">Your score trend will appear here after you save results.</div>
+    </section>
+
+    <section class="panel history-panel">
+      <div class="table-head"><h3>Saved records</h3><span id="recordCount">0 records</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Material</th><th>Listening</th><th>Reading</th><th>Speaking</th><th>Writing</th><th></th></tr></thead><tbody id="historyBody"><tr><td colspan="7" class="empty-row">No records yet. Add your first practice above.</td></tr></tbody></table></div>
+    </section>
+
+    <footer><span>IELTS TRACKER</span><span>Your data stays in this browser unless you export it.</span></footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
