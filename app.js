@@ -2,8 +2,8 @@ const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = "ielts-tracker-records-v1";
 
 // ====== 你的云端配置 ======
-const SUPABASE_URL = "https://jslkvrisoaxecowvcuvm.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_pl3xc71zvKX_Gs1JOqsVZQ_4E-tIRPt"; 
+const SUPABASE_URL = "https://jslkvrjsoaexocwvcuvm.supabase.co";
+const SUPABASE_ANON_KEY = "这里替换成你的 sb_publishable_ 开头的长串";
 // ===========================
 
 let sb = null;
@@ -63,6 +63,7 @@ function renderStats(){
   else {$("averageScore").textContent=l?`L ${l.band.toFixed(1)}`:r?`R ${r.band.toFixed(1)}`:"—";$("averageMeta").textContent="Only one section available";}
   $("practiceDays").textContent=new Set(records.filter(x=>x.speaking||x.task1Done||x.task2Done||x.writing).map(x=>x.date)).size;
 }
+
 function renderHistory(){
   const sorted=[...records].sort((a,b)=>b.date.localeCompare(a.date));
   $("recordCount").textContent=`${records.length} record${records.length===1?"":"s"}`;
@@ -70,14 +71,19 @@ function renderHistory(){
   $("historyBody").innerHTML=sorted.map(x=>{
     const l=x.listeningWrong!==null?`<span class="band">${bandFromWrong(x.listeningWrong,"L").toFixed(1)}</span> <small>(${x.listeningWrong} wrong${partsText(x.listeningParts)})</small>`:"—";
     const r=x.readingWrong!==null?`<span class="band">${bandFromWrong(x.readingWrong,"R").toFixed(1)}</span> <small>(${x.readingWrong} wrong${partsText(x.readingParts)})</small>`:"—";
-    const t1Done=!!(x.task1Done || x.writing);
-    const t2Done=!!x.task2Done;
+    
+    // === 修复大小作文联动的 BUG ===
+    // 完全依赖自己的字段，不再依赖旧的 writing 字段
+    const t1Done = !!x.task1Done;
+    const t2Done = !!x.task2Done;
+    
     const t1=t1Done?`<span class="status">✓ ${escapeHTML(x.task1Type||"Done")}</span>${x.task1Note?`<small class="topic-note">${escapeHTML(x.task1Note)}</small>`:""}`:"—";
     const t2=t2Done?`<span class="status">✓ ${escapeHTML(x.task2Type||"Done")}</span>${x.task2Note?`<small class="topic-note">${escapeHTML(x.task2Note)}</small>`:""}`:"—";
     return `<tr><td>${formatDate(x.date)}</td><td>${escapeHTML(x.testName||"Practice")}</td><td>${l}</td><td>${r}</td><td>${x.speaking?'<span class="status">✓ Done</span>':"—"}</td><td>${t1}</td><td>${t2}</td><td><button class="delete-btn" data-delete="${x.id}" aria-label="Delete record">×</button></td></tr>`;
   }).join("");
   document.querySelectorAll("[data-delete]").forEach(btn=>btn.addEventListener("click",()=>deleteRecord(btn.dataset.delete)));
 }
+
 function renderChart(){
   const rows=[...records].filter(x=>x.listeningWrong!==null||x.readingWrong!==null).sort((a,b)=>a.date.localeCompare(b.date)).slice(-12);
   const el=$("chart");
@@ -158,7 +164,7 @@ $("entryForm").addEventListener("submit", async e=>{
     task2Type: task2Done ? $("task2Type").value : "",
     task2Note: task2Done ? $("task2Note").value.trim() : "",
     notes: $("notes").value.trim(),
-    writing: task1Done || task2Done,
+    writing: task1Done || task2Done, // 保留这个用于统计 Practice Days
     updatedAt: Date.now()
   };
 
@@ -204,11 +210,18 @@ $("importFile").addEventListener("change",async e=>{
 // ====== 登录与同步 ======
 function updateAuthUI(){
   if(!$("loginBtn")) return;
-  $("loginBtn").hidden = !!currentUser;
-  $("logoutBtn").hidden = !currentUser;
-  $("emailInput").hidden = !!currentUser;
-  if(currentUser) $("syncStatus").textContent = `已登录：${currentUser.email}`;
-  else $("syncStatus").textContent = sb ? "未登录：只保存在本机" : "未配置云端同步";
+  const loggedIn = !!currentUser;
+  $("loginBtn").hidden = loggedIn;
+  $("logoutBtn").hidden = !loggedIn;
+  $("emailInput").hidden = loggedIn;
+  
+  if(loggedIn) {
+    $("syncStatus").textContent = `已登录：${currentUser.email}`;
+    $("emailOtp").hidden = true;
+    $("verifyBtn").hidden = true;
+  } else {
+    $("syncStatus").textContent = sb ? "未登录：只保存在本机" : "未配置云端同步";
+  }
 }
 
 async function syncAll(){
@@ -271,22 +284,55 @@ async function initAuth(){
   });
 }
 
+// 发送验证码
 $("loginBtn")?.addEventListener("click", async () => {
   if(!sb){ alert("还没有配置云端同步，请先填写 app.js 顶部的两个 Supabase 值。"); return; }
   const email = $("emailInput").value.trim();
   if(!email){ alert("请输入邮箱"); return; }
-  const redirect = location.href.split("#")[0].split("?")[0];
+  
   const { error } = await sb.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: redirect }
+    options: { shouldCreateUser: true }
   });
-  if(error) alert(error.message);
-  else alert("登录链接已发送到邮箱，请去邮箱点链接。三台设备都用同一个邮箱登录。");
+  
+  if(error) {
+    alert(error.message);
+  } else {
+    alert("验证码已发送到你的邮箱，请查收（如果没看到，请检查垃圾邮件）。");
+    $("emailInput").hidden = true;
+    $("loginBtn").hidden = true;
+    $("emailOtp").hidden = false;
+    $("verifyBtn").hidden = false;
+    $("syncStatus").textContent = "等待输入验证码...";
+  }
 });
 
+// 验证 6 位验证码
+$("verifyBtn")?.addEventListener("click", async () => {
+  const email = $("emailInput").value.trim();
+  const token = $("emailOtp").value.trim();
+  if(!token || token.length !== 6){ alert("请输入完整的 6 位数字验证码"); return; }
+  
+  $("verifyBtn").textContent = "验证中...";
+  const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  
+  if(error) {
+    alert("验证失败：" + error.message);
+    $("verifyBtn").textContent = "验证并登录";
+  } else {
+    $("verifyBtn").textContent = "验证并登录";
+  }
+});
+
+// 退出登录
 $("logoutBtn")?.addEventListener("click", async () => {
   if(sb) await sb.auth.signOut();
   currentUser = null;
+  $("emailInput").hidden = false;
+  $("loginBtn").hidden = false;
+  $("emailOtp").hidden = true;
+  $("verifyBtn").hidden = true;
+  $("emailOtp").value = "";
   updateAuthUI();
 });
 
