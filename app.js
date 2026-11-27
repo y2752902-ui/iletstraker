@@ -1,5 +1,17 @@
 const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = "ielts-tracker-records-v1";
+
+// ====== 你的云端配置 ======
+const SUPABASE_URL = "https://jslkvrjsoaexocwvcuvm.supabase.co";
+const SUPABASE_ANON_KEY = "在这里粘贴你的_publishable_key"; 
+// ===========================
+
+let sb = null;
+if (window.supabase && SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20) {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+let currentUser = null;
+
 const listeningBands = [[39,40,9],[37,38,8.5],[35,36,8],[32,34,7.5],[30,31,7],[26,29,6.5],[23,25,6],[18,22,5.5],[16,17,5],[13,15,4.5],[10,12,4],[8,9,3.5],[6,7,3],[4,5,2.5],[0,3,2]];
 const readingBands = [[39,40,9],[37,38,8.5],[35,36,8],[33,34,7.5],[30,32,7],[27,29,6.5],[23,26,6],[19,22,5.5],[15,18,5],[13,14,4.5],[10,12,4],[8,9,3.5],[6,7,3],[4,5,2.5],[0,3,2]];
 let records = loadRecords();
@@ -13,6 +25,27 @@ function scoreText(wrong,type){if(wrong==="")return "Not entered";const b=bandFr
 function todayISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function formatDate(s){if(!s)return "—";return new Date(s+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});}
 function escapeHTML(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function partsText(parts){ return Array.isArray(parts) && parts.length ? ` <small class="parts-note">(${parts.join("/")})</small>` : ""; }
+
+function readParts(prefix, count) {
+  return Array.from({ length: count }, (_, i) => {
+    const el = $(`${prefix}${i + 1}`);
+    if (!el) return null;
+    return el.value === "" ? null : Number(el.value);
+  });
+}
+function allEmpty(parts){ return parts.every(v => v === null); }
+function allFilled(parts){ return parts.every(v => v !== null); }
+function sumParts(parts){ return parts.reduce((a, b) => a + b, 0); }
+
+function syncPartTotals() {
+  const lp = readParts("listeningPart", 4);
+  const rp = readParts("readingPart", 3);
+  if (allFilled(lp)) $("listeningWrong").value = sumParts(lp);
+  if (allFilled(rp)) $("readingWrong").value = sumParts(rp);
+  showLiveScores();
+}
+
 function showLiveScores(){
   for(const [id,type,result] of [["listeningWrong","L","listeningResult"],["readingWrong","R","readingResult"]]){
     const v=$(id).value; const el=$(result);
@@ -33,14 +66,14 @@ function renderStats(){
 function renderHistory(){
   const sorted=[...records].sort((a,b)=>b.date.localeCompare(a.date));
   $("recordCount").textContent=`${records.length} record${records.length===1?"":"s"}`;
-  if(!sorted.length){$("historyBody").innerHTML='<tr><td colspan="7" class="empty-row">No records yet. Add your first practice above.</td></tr>';return;}
+  if(!sorted.length){$("historyBody").innerHTML='<tr><td colspan="8" class="empty-row">No records yet. Add your first practice above.</td></tr>';return;}
   $("historyBody").innerHTML=sorted.map(x=>{
-    const l=x.listeningWrong!==null?`<span class="band">${bandFromWrong(x.listeningWrong,"L").toFixed(1)}</span> <small>(${x.listeningWrong} wrong)</small>`:"—";
-    const r=x.readingWrong!==null?`<span class="band">${bandFromWrong(x.readingWrong,"R").toFixed(1)}</span> <small>(${x.readingWrong} wrong)</small>`:"—";
+    const l=x.listeningWrong!==null?`<span class="band">${bandFromWrong(x.listeningWrong,"L").toFixed(1)}</span> <small>(${x.listeningWrong} wrong${partsText(x.listeningParts)})</small>`:"—";
+    const r=x.readingWrong!==null?`<span class="band">${bandFromWrong(x.readingWrong,"R").toFixed(1)}</span> <small>(${x.readingWrong} wrong${partsText(x.readingParts)})</small>`:"—";
     const t1Done=!!(x.task1Done || x.writing);
     const t2Done=!!x.task2Done;
     const t1=t1Done?`<span class="status">✓ ${escapeHTML(x.task1Type||"Done")}</span>${x.task1Note?`<small class="topic-note">${escapeHTML(x.task1Note)}</small>`:""}`:"—";
-    const t2=t2Done?`<span class="status">✓ ${escapeHTML(x.task2Type||"Done")}</span>${x.task2Note?`<small class="topic-note">${escapeHTML(x.task2Note)}</small>`:"—"}`:"—";
+    const t2=t2Done?`<span class="status">✓ ${escapeHTML(x.task2Type||"Done")}</span>${x.task2Note?`<small class="topic-note">${escapeHTML(x.task2Note)}</small>`:""}`:"—";
     return `<tr><td>${formatDate(x.date)}</td><td>${escapeHTML(x.testName||"Practice")}</td><td>${l}</td><td>${r}</td><td>${x.speaking?'<span class="status">✓ Done</span>':"—"}</td><td>${t1}</td><td>${t2}</td><td><button class="delete-btn" data-delete="${x.id}" aria-label="Delete record">×</button></td></tr>`;
   }).join("");
   document.querySelectorAll("[data-delete]").forEach(btn=>btn.addEventListener("click",()=>deleteRecord(btn.dataset.delete)));
@@ -65,31 +98,202 @@ function renderChart(){
 }
 function render(){renderStats();renderHistory();renderChart();}
 function resetForm(){editingId=null;$("entryForm").reset();$("date").value=todayISO();$("saveButton").textContent="Save daily record";$("formMessage").textContent="";showLiveScores();}
-function deleteRecord(id){if(!confirm("Delete this saved record?"))return;records=records.filter(x=>String(x.id)!==String(id));saveRecords();render();}
-$("entryForm").addEventListener("submit",e=>{
+
+async function uploadRecord(record){
+  if(!currentUser || !sb) return;
+  const { error } = await sb.from("records").upsert({
+    user_id: currentUser.id,
+    id: String(record.id),
+    data: record,
+    updated_at: record.updatedAt || Date.now(),
+    deleted: false
+  }, { onConflict: "user_id,id" });
+  if (error) $("syncStatus").textContent = "同步失败：" + error.message;
+  else $("syncStatus").textContent = "已同步";
+}
+
+async function deleteRecord(id){
+  if(!confirm("Delete this saved record?"))return;
+  records=records.filter(x=>String(x.id)!==String(id));
+  saveRecords(); render();
+  if(currentUser && sb){
+    await sb.from("records").upsert({
+      user_id: currentUser.id,
+      id: String(id),
+      data: {},
+      updated_at: Date.now(),
+      deleted: true
+    }, { onConflict: "user_id,id" });
+  }
+}
+
+$("entryForm").addEventListener("submit", async e=>{
   e.preventDefault();
-  const l=$("listeningWrong").value,r=$("readingWrong").value;
+  const lp = readParts("listeningPart", 4);
+  const rp = readParts("readingPart", 3);
+  if(!allEmpty(lp) && !allFilled(lp)){alert("Listening 分项要么全部填写，要么全部留空。");return;}
+  if(!allEmpty(rp) && !allFilled(rp)){alert("Reading 分项要么全部填写，要么全部留空。");return;}
+
+  const l = allFilled(lp) ? String(sumParts(lp)) : $("listeningWrong").value;
+  const r = allFilled(rp) ? String(sumParts(rp)) : $("readingWrong").value;
   if(!validScore(l)||!validScore(r)){alert("Please enter whole numbers from 0 to 40.");return;}
+
   const task1Done=$("task1Done").checked, task2Done=$("task2Done").checked;
   if(task1Done && !$("task1Type").value){alert("Please select the Task 1 question type.");$("task1Type").focus();return;}
   if(task2Done && !$("task2Type").value){alert("Please select the Task 2 essay type.");$("task2Type").focus();return;}
-  const record={id:editingId||`${Date.now()}-${Math.random().toString(16).slice(2)}`,date:$("date").value,testName:$("testName").value.trim(),listeningWrong:l===""?null:Number(l),readingWrong:r===""?null:Number(r),speaking:$("speaking").checked,task1Done,task1Type:task1Done?$("task1Type").value:"",task1Note:task1Done?$("task1Note").value.trim():"",task2Done,task2Type:task2Done?$("task2Type").value:"",task2Note:task2Done?$("task2Note").value.trim():"",notes:$("notes").value.trim()};
-  const index=records.findIndex(x=>String(x.id)===String(record.id));if(index>=0)records[index]=record;else records.push(record);
-  saveRecords();render();$("formMessage").textContent="Record saved on this device.";resetForm();
+
+  const record={
+    id: editingId || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    date: $("date").value,
+    testName: $("testName").value.trim(),
+    listeningWrong: l===""?null:Number(l),
+    readingWrong: r===""?null:Number(r),
+    listeningParts: allFilled(lp) ? lp : null,
+    readingParts: allFilled(rp) ? rp : null,
+    speaking: $("speaking").checked,
+    task1Done,
+    task1Type: task1Done ? $("task1Type").value : "",
+    task1Note: task1Done ? $("task1Note").value.trim() : "",
+    task2Done,
+    task2Type: task2Done ? $("task2Type").value : "",
+    task2Note: task2Done ? $("task2Note").value.trim() : "",
+    notes: $("notes").value.trim(),
+    writing: task1Done || task2Done,
+    updatedAt: Date.now()
+  };
+
+  const index=records.findIndex(x=>String(x.id)===String(record.id));
+  if(index>=0) records[index]=record; else records.push(record);
+  saveRecords();
+  render();
+  await uploadRecord(record);
+  $("formMessage").textContent="Record saved on this device.";
+  resetForm();
 });
+
 $("entryForm").addEventListener("reset",()=>setTimeout(()=>{editingId=null;$("date").value=todayISO();showLiveScores();},0));
-$("listeningWrong").addEventListener("input",showLiveScores);$("readingWrong").addEventListener("input",showLiveScores);
+$("listeningWrong").addEventListener("input",showLiveScores);
+$("readingWrong").addEventListener("input",showLiveScores);
+
+for(let i=1;i<=4;i++){ const el=$(`listeningPart${i}`); if(el) el.addEventListener("input", syncPartTotals); }
+for(let i=1;i<=3;i++){ const el=$(`readingPart${i}`); if(el) el.addEventListener("input", syncPartTotals); }
+
 $("exportButton").addEventListener("click",()=>{
   const blob=new Blob([JSON.stringify({app:"IELTS Tracker",version:1,exportedAt:new Date().toISOString(),records},null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`ielts-tracker-backup-${todayISO()}.json`;a.click();URL.revokeObjectURL(url);
 });
+
 $("importFile").addEventListener("change",async e=>{
   const file=e.target.files[0];if(!file)return;
-  try{const data=JSON.parse(await file.text());const incoming=Array.isArray(data)?data:data.records;if(!Array.isArray(incoming))throw new Error("Invalid backup");
+  try{
+    const data=JSON.parse(await file.text());
+    const incoming=Array.isArray(data)?data:data.records;
+    if(!Array.isArray(incoming))throw new Error("Invalid backup");
     if(!confirm(`Import ${incoming.length} records? Records with matching IDs will be replaced.`))return;
-    const map=new Map(records.map(x=>[String(x.id),x]));incoming.forEach(x=>{if(x&&x.date&&x.id!==undefined)map.set(String(x.id),x);});records=[...map.values()];saveRecords();render();alert("Backup imported.");}
-  catch(err){alert("Could not read this backup file.");}finally{e.target.value="";}
+    const map=new Map(records.map(x=>[String(x.id),x]));
+    incoming.forEach(x=>{ if(x&&x.date&&x.id!==undefined){ x.updatedAt=Date.now(); map.set(String(x.id),x); } });
+    records=[...map.values()];
+    saveRecords(); render();
+    if(currentUser) await syncAll();
+    alert("Backup imported.");
+  }
+  catch(err){alert("Could not read this backup file.");}
+  finally{e.target.value="";}
 });
+
+// ====== 登录与同步 ======
+function updateAuthUI(){
+  if(!$("loginBtn")) return;
+  $("loginBtn").hidden = !!currentUser;
+  $("logoutBtn").hidden = !currentUser;
+  $("emailInput").hidden = !!currentUser;
+  if(currentUser) $("syncStatus").textContent = `已登录：${currentUser.email}`;
+  else $("syncStatus").textContent = sb ? "未登录：只保存在本机" : "未配置云端同步";
+}
+
+async function syncAll(){
+  if(!currentUser || !sb) return;
+  const { data: cloud, error } = await sb.from("records").select("*");
+  if(error){ $("syncStatus").textContent = "同步失败：" + error.message; return; }
+
+  const cloudMap = new Map(cloud.map(r => [String(r.id), r]));
+  const localMap = new Map(records.map(r => [String(r.id), { ...r, updatedAt: r.updatedAt || 0 }]));
+
+  for(const [id, cr] of cloudMap){
+    const lr = localMap.get(id);
+    if(cr.deleted){
+      if(!lr || (cr.updated_at || 0) >= (lr.updatedAt || 0)) localMap.delete(id);
+      continue;
+    }
+    if(!lr || (cr.updated_at || 0) > (lr.updatedAt || 0)){
+      localMap.set(id, { ...(cr.data || {}), id, updatedAt: cr.updated_at || 0 });
+    }
+  }
+
+  const upserts = [];
+  for(const [id, r] of localMap){
+    const cr = cloudMap.get(id);
+    if(!cr || (r.updatedAt || 0) > (cr.updated_at || 0)){
+      const rec = { ...r, updatedAt: r.updatedAt || Date.now() };
+      localMap.set(id, rec);
+      upserts.push({
+        user_id: currentUser.id,
+        id,
+        data: rec,
+        updated_at: rec.updatedAt,
+        deleted: false
+      });
+    }
+  }
+
+  if(upserts.length){
+    const { error: upErr } = await sb.from("records").upsert(upserts, { onConflict: "user_id,id" });
+    if(upErr){ $("syncStatus").textContent = "同步失败：" + upErr.message; return; }
+  }
+
+  records = [...localMap.values()];
+  saveRecords();
+  render();
+  $("syncStatus").textContent = "已同步";
+}
+
+async function initAuth(){
+  if(!sb){ updateAuthUI(); return; }
+  const { data } = await sb.auth.getSession();
+  currentUser = data.session?.user || null;
+  updateAuthUI();
+  if(currentUser) await syncAll();
+
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    currentUser = session?.user || null;
+    updateAuthUI();
+    if(currentUser) await syncAll();
+  });
+}
+
+$("loginBtn")?.addEventListener("click", async () => {
+  if(!sb){ alert("还没有配置云端同步，请先填写 app.js 顶部的两个 Supabase 值。"); return; }
+  const email = $("emailInput").value.trim();
+  if(!email){ alert("请输入邮箱"); return; }
+  const redirect = location.href.split("#")[0].split("?")[0];
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirect }
+  });
+  if(error) alert(error.message);
+  else alert("登录链接已发送到邮箱，请去邮箱点链接。三台设备都用同一个邮箱登录。");
+});
+
+$("logoutBtn")?.addEventListener("click", async () => {
+  if(sb) await sb.auth.signOut();
+  currentUser = null;
+  updateAuthUI();
+});
+
 $("todayLabel").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"});
-$("date").value=todayISO();render();showLiveScores();
+$("date").value=todayISO();
+render();
+showLiveScores();
+initAuth();
+
 if("serviceWorker" in navigator && location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
