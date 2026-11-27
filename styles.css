@@ -17,3 +17,29 @@
 .single-habit{grid-template-columns:1fr}
 .topic-note{display:block;color:#8994a5;font-size:10px;margin-top:3px;white-space:normal;max-width:190px}
 @media(max-width:720px){.writing-grid{grid-template-columns:1fr}.writing-task{padding:14px}}
+
+/* 跨设备同步面板 */
+.sync-panel{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:18px 0 0;padding:16px 20px}
+.sync-panel h3{font-size:15px;margin:0 0 4px}
+.sync-hint{font-size:11px;color:var(--muted);margin:0;max-width:430px;line-height:1.5}
+.sync-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.sync-controls input{border:1px solid #dfe5ed;border-radius:8px;padding:9px 10px;font:400 12px 'DM Sans';min-width:210px;outline:none}
+.sync-controls input:focus{border-color:#7899cf;box-shadow:0 0 0 3px #4776c51a}
+#syncStatus{font-size:11px;color:var(--muted);width:100%;text-align:right}
+
+/* 听力/阅读小分 */
+.parts-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:8px}
+.parts-grid.reading-parts{grid-template-columns:repeat(3,1fr)}
+.parts-grid label{font-size:9px;color:var(--muted);display:flex;flex-direction:column;gap:3px;font-weight:600}
+.parts-grid input{width:100%;border:1px solid #dfe5ed;border-radius:7px;padding:8px 6px;font:400 12px 'DM Sans';text-align:center;outline:none}
+.parts-grid input:focus{border-color:#7899cf;box-shadow:0 0 0 3px #4776c51a}
+.parts-hint{display:block;color:#9aa4b2;font-size:10px;margin-top:5px}
+.parts-note{color:#8994a5;font-size:10px}
+
+@media(max-width:720px){
+  .sync-panel{flex-direction:column;align-items:flex-start}
+  .sync-controls{justify-content:flex-start;width:100%}
+  .sync-controls input{min-width:0;width:100%}
+  #syncStatus{text-align:left}
+  .parts-grid,.parts-grid.reading-parts{grid-template-columns:repeat(2,1fr)}
+}
